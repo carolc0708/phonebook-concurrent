@@ -5,6 +5,7 @@
 *.list
 *.swp
 *.bak
+*.out
 phonebook_opt
 phonebook_orig
 phonebook_tpool
