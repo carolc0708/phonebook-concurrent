@@ -2,6 +2,7 @@ CC ?= gcc
 CFLAGS_common ?= -Wall -std=gnu99
 CFLAGS_orig = -O0
 CFLAGS_opt  = -O0 -pthread -g -pg
+CFLAGS_tpool = -O0 -pthread -g -pg
 
 ifdef THREAD
 CFLAGS_opt  += -D THREAD_NUM=${THREAD}
@@ -11,7 +12,7 @@ ifeq ($(strip $(DEBUG)),1)
 CFLAGS_opt += -DDEBUG -g
 endif
 
-EXEC = phonebook_orig phonebook_opt
+EXEC = phonebook_orig phonebook_opt phonebook_tpool
 all: $(EXEC)
 
 SRCS_common = main.c
@@ -29,6 +30,11 @@ phonebook_opt: $(SRCS_common) phonebook_opt.c phonebook_opt.h
 		-DIMPL="\"$@.h\"" -o $@ \
 		$(SRCS_common) $@.c
 
+phonebook_tpool: $(SRCS_common) phonebook_tpool.c phonebook_tpool.h
+	$(CC) $(CFLAGS_common) $(CFLAGS_tpool)\
+		-DIMPL="\"$@.h\"" -o $@ \
+		$(SRCS_common) $@.c $ threadpool.c
+
 run: $(EXEC)
 	echo 3 | sudo tee /proc/sys/vm/drop_caches
 	watch -d -t "./phonebook_orig && echo 3 | sudo tee /proc/sys/vm/drop_caches"
@@ -39,7 +45,10 @@ cache-test: $(EXEC)
 		./phonebook_orig
 	perf stat --repeat 100 \
 		-e cache-misses,cache-references,instructions,cycles \
-		./phonebook_opt
+		./phonebook_opt	
+	perf stat --repeat 100 \
+		-e cache-misses,cache-references,instructions,cycles \
+		./phonebook_tpool
 
 output.txt: cache-test calculate
 	./calculate
@@ -53,4 +62,4 @@ calculate: calculate.c
 .PHONY: clean
 clean:
 	$(RM) $(EXEC) *.o perf.* \
-	      	calculate orig.txt opt.txt output.txt runtime.png file_align align.txt
+	      	calculate orig.txt opt.txt output.txt tpool.txt runtime.png file_align align.txt

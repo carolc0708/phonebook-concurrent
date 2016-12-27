@@ -1,8 +1,12 @@
-#ifndef _PHONEBOOK_OPT_H
-#define _PHONEBOOK_OPT_H
+#ifndef _PHONEBOOK_TPOOL_H
+#define _PHONEBOOK_TPOOL_H
 
 #include <pthread.h>
 #include <time.h>
+
+#include "threadpool.h"
+#define TPOOL 1
+#define QUEUE 16
 
 #define MAX_LAST_NAME_SIZE 16
 
