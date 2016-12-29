@@ -10,6 +10,7 @@
 #include <sys/mman.h>
 
 #include IMPL
+#include "lockfree_threadpool.h"
 
 #define DICT_FILE "./dictionary/words.txt"
 
@@ -82,6 +83,7 @@ int main(int argc, char *argv[])
                                          fs / MAX_LAST_NAME_SIZE);
 
     assert(entry_pool && "entry_pool error");
+
 #if defined(TPOOL)
     /*add tasks to thread pool*/
     extern threadpool_t *tpool;
@@ -97,6 +99,19 @@ int main(int argc, char *argv[])
     assert(threadpool_destroy(tpool,1) == 0);
     pthread_mutex_destroy(&lock);
 
+#elif defined(LFTPOOL)
+    void *lftpool;
+    extern pthread_mutex_t lock;
+
+    pthread_mutex_init(&lock, NULL);
+    assert((lftpool = tpool_init(THREAD_NUM)) != NULL);
+
+    append_a **app = (append_a **)malloc(sizeof(append_a *)*THREAD_NUM);
+    for(int i=0; i<THREAD_NUM; i++){
+        app[i] = new_append_a(map + MAX_LAST_NAME_SIZE * i, map + fs, i, THREAD_NUM, entry_pool + i);
+        tpool_add_work(lftpool, &append, (void *)app[i]);
+    }
+    tpool_destroy(lftpool, 1);
 #else
     pthread_setconcurrency(THREAD_NUM + 1);
 
@@ -176,6 +191,8 @@ int main(int argc, char *argv[])
 #if defined(OPT)
 #if defined(TPOOL)
     output = fopen("tpool.txt", "a");
+#elif defined(LFTPOOL)
+    output = fopen("lftpool.txt", "a");
 #else
     output = fopen("opt.txt", "a");
 #endif
@@ -194,6 +211,8 @@ int main(int argc, char *argv[])
 #else
     free(entry_pool);
 #if defined(TPOOL)
+#elif defined(LFTPOOL)
+
 #else
     free(tid);
 #endif

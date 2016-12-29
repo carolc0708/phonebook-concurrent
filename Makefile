@@ -3,6 +3,7 @@ CFLAGS_common ?= -Wall -std=gnu99
 CFLAGS_orig = -O0
 CFLAGS_opt  = -O0 -pthread -g -pg
 CFLAGS_tpool = -O0 -pthread -g -pg
+CFLAGS_lftpool = -O0 -pthread -g -pg
 
 ifdef THREAD
 CFLAGS_opt  += -D THREAD_NUM=${THREAD}
@@ -12,7 +13,7 @@ ifeq ($(strip $(DEBUG)),1)
 CFLAGS_opt += -DDEBUG -g
 endif
 
-EXEC = phonebook_orig phonebook_opt phonebook_tpool
+EXEC = phonebook_orig phonebook_opt phonebook_tpool phonebook_lftpool
 all: $(EXEC)
 
 SRCS_common = main.c
@@ -31,9 +32,15 @@ phonebook_opt: $(SRCS_common) phonebook_opt.c phonebook_opt.h
 		$(SRCS_common) $@.c
 
 phonebook_tpool: $(SRCS_common) phonebook_tpool.c phonebook_tpool.h
-	$(CC) $(CFLAGS_common) $(CFLAGS_tpool)\
+	$(CC) $(CFLAGS_common) $(CFLAGS_tpool) \
 		-DIMPL="\"$@.h\"" -o $@ \
 		$(SRCS_common) $@.c $ threadpool.c
+
+phonebook_lftpool: $(SRCS_common) phonebook_lftpool.c phonebook_lftpool.h
+	$(CC) $(CFLAGS_common) $(CFLAGS_lftpool) \
+		-DIMPL="\"$@.h\"" -o $@ \
+		$(SRCS_common) $@.c $ lockfree_threadpool.c
+
 
 run: $(EXEC)
 	echo 3 | sudo tee /proc/sys/vm/drop_caches
@@ -49,6 +56,9 @@ cache-test: $(EXEC)
 	perf stat --repeat 100 \
 		-e cache-misses,cache-references,instructions,cycles \
 		./phonebook_tpool
+	perf stat --repeat 100 \
+		-e cache-misses,cache-references,instructions,cycles \
+		./phonebook_lftpool
 
 output.txt: cache-test calculate
 	./calculate
@@ -62,4 +72,4 @@ calculate: calculate.c
 .PHONY: clean
 clean:
 	$(RM) $(EXEC) *.o perf.* \
-	      	calculate orig.txt opt.txt output.txt tpool.txt runtime.png file_align align.txt
+	      	calculate orig.txt opt.txt output.txt tpool.txt lftpool.txt runtime.png file_align align.txt

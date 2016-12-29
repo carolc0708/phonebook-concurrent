@@ -9,10 +9,12 @@
 phonebook_opt
 phonebook_orig
 phonebook_tpool
+phonebook_lftpool
 calculate
 orig.txt
 opt.txt
 tpool.txt
+lftpool.txt
 output.txt
 runtime.png
 align.txt
